@@ -1,6 +1,7 @@
 ﻿open System
 
 
+
 let calc (start:int array) (lines:int array) =
     let mutable l = lines
     let mutable s = start
