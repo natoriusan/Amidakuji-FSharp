@@ -1,24 +1,14 @@
 ﻿open System
+open Plotly.NET
 
 
 
 let calc (start:int array) (lines:int array) =
-    let mutable l = lines
     let mutable s = start
-    while l <> [||] do
-        // s <-
-        //     [|
-        //         if l[0] = 0 then [||] else s[..l[0]-1]
-        //         [|s[l[0]+1]|]
-        //         [|s[l[0]]|]
-        //         s[l[0]+2..]
-        //     |] |> Array.concat
-            
-        let a = s[l[0]]
-        s[l[0]] <- s[l[0]+1]
-        s[l[0]+1] <- a
-        
-        l <- l[1..]
+    for i in lines do
+        let a = s[i]
+        s[i] <- s[i+1]
+        s[i+1] <- a
     s
             
             
@@ -27,7 +17,6 @@ let evaluate verticalLine horizontalLine startFrom times =
     let calculated =
         [|
             for i in 1..times ->
-                printf "\r%d / %d" i times
                 [| for _ in 0..horizontalLine-1 -> r.Next(0,verticalLine-1) |]
                     |> calc [| 0..verticalLine-1 |]
                     |> Array.findIndex ((=)startFrom)
@@ -37,28 +26,34 @@ let evaluate verticalLine horizontalLine startFrom times =
         for i in 0..verticalLine-1 ->
             calculated |> Array.filter ((=)i) |> Array.length
     |]
+    
+    
+let getStandardDeviation (arr: int array) =
+    let floatArr = arr |> Array.map float
+    ((floatArr |> Array.map (fun x -> x**2) |> Array.average) - (floatArr |> Array.average)**2)
+        |> sqrt
             
 
 [<EntryPoint>]
 let main _ =
-    let sw = Diagnostics.Stopwatch()
-    sw.Start()
-    
     let vertical = 40
-    let horizontal = 10000
-    let results = evaluate vertical horizontal 0 1000
     
-    sw.Stop()
+    let min = 0
+    let max = 10000
+    let step = 100
     
-    results
-        |> Array.map string
-        |> String.concat ", "
-        |> printfn "\n%s"
-    
-    let floatResults = Array.map float results
-    let average = Array.average floatResults
-    let sd = (((Array.map (fun x -> x**2.0) floatResults) |> Array.average) - average**2.0) |> sqrt
-    printfn "標準偏差: %f" sd
-    printfn "変動係数: %f" (sd/average)
-    printfn "実行時間: %A" sw.Elapsed
+    let x = [| min..step..max |]
+    let y =
+        [|
+            for i in min..step..max ->
+                printf "\r%d / %d" (i/step) (max/step |> int)
+                evaluate vertical i 0 10000
+                    |> (fun x -> getStandardDeviation x / (x |> Array.map float |> Array.average))
+        |]
+        
+    Chart.Point(x,y)
+        |> Chart.withXAxisStyle "Number of Horizontal Lines"
+        |> Chart.withYAxisStyle "Coefficient of Variation"
+        |> Chart.show
+        
     0

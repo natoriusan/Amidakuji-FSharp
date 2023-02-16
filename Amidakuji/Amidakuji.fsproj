@@ -6,7 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Program.fs"/>
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Plotly.NET" Version="3.0.1" />
     </ItemGroup>
 
 </Project>
