@@ -40,14 +40,15 @@ let main _ =
     
     let min = 0
     let max = 10000
-    let step = 100
+    let step = 50
+    let count = 10000
     
     let x = [| min..step..max |]
     let y =
         [|
             for i in min..step..max ->
                 printf "\r%d / %d" (i/step) (max/step |> int)
-                evaluate vertical i 0 10000
+                evaluate vertical i 0 count
                     |> (fun x -> getStandardDeviation x / (x |> Array.map float |> Array.average))
         |]
         
