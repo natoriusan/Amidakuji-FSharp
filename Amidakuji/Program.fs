@@ -16,7 +16,7 @@ let evaluate verticalLine horizontalLine startFrom times =
     let r = Random()
     let calculated =
         [|
-            for i in 1..times ->
+            for _ in 1..times ->
                 [| for _ in 0..horizontalLine-1 -> r.Next(0,verticalLine-1) |]
                     |> calc [| 0..verticalLine-1 |]
                     |> Array.findIndex ((=)startFrom)
@@ -36,25 +36,45 @@ let getStandardDeviation (arr: int array) =
 
 [<EntryPoint>]
 let main _ =
-    let vertical = 40
+    let verticalMin = 3
+    let verticalStep = 1
+    let verticalMax = 20
     
-    let min = 0
-    let max = 10000
-    let step = 50
-    let count = 10000
+    let count = 50000
     
-    let x = [| min..step..max |]
+    let accuracy = 10
+    
+    let x = [| verticalMin..verticalStep..verticalMax |]
     let y =
         [|
-            for i in min..step..max ->
-                printf "\r%d / %d" (i/step) (max/step |> int)
-                evaluate vertical i 0 count
-                    |> (fun x -> getStandardDeviation x / (x |> Array.map float |> Array.average))
+            for i in verticalMin..verticalStep..verticalMax ->
+                let mutable vert = 0
+                
+                let mutable lastIndex = 0.
+                let mutable index = 1.
+                for j in 0..accuracy-1 do
+                    printf "\r%d / %d  -  %d / %d    " (i-verticalMin+1) (verticalMax-verticalMin+1) (j+1) accuracy
+                    let hrz = 10.**index |> int
+                    let r = evaluate i hrz 0 count
+                    if Array.forall (fun x -> float(count/i)*0.95<=float(x) && float(x)<=float(count/i)*1.05) r then
+                        vert <- hrz
+                        index <- (lastIndex+index)/2.
+                    else
+                        if index%1. = 0. then
+                            index <- index+1.
+                            lastIndex <- index-1.
+                        else
+                            let l = index
+                            index <- index + (index-lastIndex)/2.
+                            lastIndex <- l
+                            
+                vert
         |]
+    
         
     Chart.Point(x,y)
-        |> Chart.withXAxisStyle "Number of Horizontal Lines"
-        |> Chart.withYAxisStyle "Coefficient of Variation"
+        // |> Chart.withXAxisStyle "Number of Horizontal Lines"
+        // |> Chart.withYAxisStyle "Coefficient of Variation"
         |> Chart.show
         
     0
