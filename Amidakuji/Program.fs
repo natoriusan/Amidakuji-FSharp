@@ -1,5 +1,4 @@
 ﻿open System
-// open Plotly.NET
 open System.IO
 
 
@@ -36,47 +35,49 @@ let getStandardDeviation (arr: int array) =
 
 [<EntryPoint>]
 let main _ =
+    let sw = Diagnostics.Stopwatch()
+    sw.Start()
     File.WriteAllText("/Users/programming/Output/Amidakuji/data.csv", "x,y\n")
     let verticalMin = 3
     let verticalStep = 1
     let verticalMax = 30
     
-    let count = 100000
+    let count = 200000
     
-    let accuracy = 15
+    let accuracy = 18
     
+    let result =
+        [|
+             for i in verticalMin..verticalStep..verticalMax ->
+                async {
+                    let mutable vert = 0
+                    
+                    let mutable lastIndex = 0.
+                    let mutable index = 1.
+                    for _ in 0..accuracy-1 do
+                        let hrz = 3.**index |> int
+                        let r = evaluate i hrz 0 count
+                        if Array.forall (fun x -> float(count/i)*0.95<=float(x) && float(x)<=float(count/i)*1.05) r then
+                            vert <- hrz
+                            index <- (lastIndex+index)/2.
+                        else
+                            if index%1. = 0. then
+                                index <- index+1.
+                                lastIndex <- index-1.
+                            else
+                                let l = index
+                                index <- index + (index-lastIndex)/2.
+                                lastIndex <- l
+                    
+                    printfn "%d finished" i
+                    return vert
+                }
+        |] |> Async.Parallel |> Async.RunSynchronously
     
-    for i in verticalMin..verticalStep..verticalMax do
-        let mutable vert = 0
-        
-        let mutable lastIndex = 0.
-        let mutable index = 1.
-        for j in 0..accuracy-1 do
-            printf "\r%d / %d  -  %d / %d    " (i-verticalMin+1) (verticalMax-verticalMin+1) (j+1) accuracy
-            let hrz = 3.**index |> int
-            let r = evaluate i hrz 0 count
-            if Array.forall (fun x -> float(count/i)*0.95<=float(x) && float(x)<=float(count/i)*1.05) r then
-                vert <- hrz
-                index <- (lastIndex+index)/2.
-            else
-                if index%1. = 0. then
-                    index <- index+1.
-                    lastIndex <- index-1.
-                else
-                    let l = index
-                    index <- index + (index-lastIndex)/2.
-                    lastIndex <- l
-        
-        File.AppendAllText("/Users/programming/Output/Amidakuji/data.csv", $"{i},{vert}\n")
+    ([|verticalMin..verticalStep..verticalMax|], result)
+        ||> Array.zip
+         |> Array.iter (fun (x, y) -> File.AppendAllText("/Users/programming/Output/Amidakuji/data.csv", $"{x},{y}\n"))
     
-        
-    // Chart.Point(x,y)
-        // |> Chart.withXAxisStyle "Number of Horizontal Lines"
-        // |> Chart.withYAxisStyle "Coefficient of Variation"
-        // |> Chart.show
-    
-    // let csv =
-    //     (x, y) ||> Array.map2 (fun x y -> $"{x},{y}") |> Array.append [|"x,y"|] |> String.concat "\n"
-    // File.WriteAllText("/Users/programming/Output/Amidakuji/data.csv", csv)
-        
+    sw.Stop()
+    printfn "%d:%d" sw.Elapsed.Minutes sw.Elapsed.Seconds
     0
