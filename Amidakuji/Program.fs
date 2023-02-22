@@ -37,7 +37,7 @@ let getStandardDeviation (arr: int array) =
 let main _ =
     let sw = Diagnostics.Stopwatch()
     sw.Start()
-    File.WriteAllText("/Users/programming/Output/Amidakuji/data.csv", "x,y\n")
+    File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv", "x,y\n")
     let verticalMin = 3
     let verticalStep = 1
     let verticalMax = 30
@@ -76,7 +76,7 @@ let main _ =
     
     ([|verticalMin..verticalStep..verticalMax|], result)
         ||> Array.zip
-         |> Array.iter (fun (x, y) -> File.AppendAllText("/Users/programming/Output/Amidakuji/data.csv", $"{x},{y}\n"))
+         |> Array.iter (fun (x, y) -> File.AppendAllText(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv", $"{x},{y}\n"))
     
     sw.Stop()
     printfn "%d:%d" sw.Elapsed.Minutes sw.Elapsed.Seconds
