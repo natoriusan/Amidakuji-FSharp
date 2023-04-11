@@ -54,7 +54,6 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
                             for _ in 1..horizontalLine/opt.duplicationTimes ->
                                 r.Next(0, if opt.connectLeftAndRight then verticalLine else verticalLine-1)
                         |]
-                    // [| for _ in 0..horizontalLine-1 -> r.Next(0,verticalLine-1) |]
                     [|
                         for i in 1..opt.duplicationTimes ->
                             if i % 2 = 0 then
