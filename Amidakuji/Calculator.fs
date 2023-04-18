@@ -21,9 +21,9 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
     
     do if opt.connectLeftAndRight && (opt.reverseHorizontally || opt.reverseVertically) then failwithf "reverseHorizontally and reverseVertically can't be true if connectLeftAndRight is true."
     
-    new (vm, vs, vM, co) = calculator (vm, vs, vM, co, 18, 3.)
-    new (vm, vs, vM, co, op) = calculator (vm, vs, vM, co, 18, 3., op)
-    new (vm, vs, vM, co, acc, accB) = calculator (vm, vs, vM, co, acc, accB, options ())
+    new (verticalMin, verticalStep, verticalMax, count) = calculator (verticalMin, verticalStep, verticalMax, count, 18, 3.)
+    new (verticalMin, verticalStep, verticalMax, count, opt) = calculator (verticalMin, verticalStep, verticalMax, count, 18, 3., opt)
+    new (verticalMin, verticalStep, verticalMax, count, accuracy, accBase) = calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBase, options ())
     
     
     member this.evaluate verticalLine horizontalLine startFrom =
