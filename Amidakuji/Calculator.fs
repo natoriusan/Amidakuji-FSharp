@@ -3,23 +3,30 @@ open System
 open System.IO
 
 
-type options (connectLeftAndRight, duplicationTimes, reverseVertically, reverseHorizontally) = // vertically -> 上下反転, horizontally -> 左右反転
-    new () = options (false, 1, false, false)
-    new (connectLeftAndRight) = options (connectLeftAndRight, 1, false, false)
-    new (duplicationTimes, reverseVertically, reverseHorizontally) = options (false, duplicationTimes, reverseVertically, reverseHorizontally)
+type options (connectLeftAndRight, duplicationTimes, reverseVertically, reverseHorizontally, horizontalProbability, pathToResultFile) = // vertically -> 上下反転, horizontally -> 左右反転
+    new () = options (false, 1, false, false, [||])
+    new (connectLeftAndRight) = options (connectLeftAndRight, 1, false, false, [||])
+    new (horizontalProbability) = options (false, 1, false, false, horizontalProbability)
+    new (connectLeftAndRight, horizontalProbability) = options (connectLeftAndRight, 1, false, false, horizontalProbability)
+    new (duplicationTimes, reverseVertically, reverseHorizontally) = options (false, duplicationTimes, reverseVertically, reverseHorizontally, [||])
+    new (connectLeftAndRight, duplicationTimes, reverseVertically, reverseHorizontally, horizontalProbability) = options (connectLeftAndRight, duplicationTimes, reverseVertically, reverseHorizontally, horizontalProbability, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv")
     
     member this.connectLeftAndRight = connectLeftAndRight
     member this.duplicationTimes = duplicationTimes
     member this.reverseVertically = reverseVertically
     member this.reverseHorizontally = reverseHorizontally
+    member this.horizontalProbability = horizontalProbability
+    member this.pathToResultFile = pathToResultFile
     
     
-
+// TODO: reverse と horizontalProbability が同時に設定されているときにエラーを出す
 type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBase, opt: options) =
     let mutable _result = [||]
     let mutable _elapsed = TimeSpan ()
     
     do if opt.connectLeftAndRight && (opt.reverseHorizontally || opt.reverseVertically) then failwithf "reverseHorizontally and reverseVertically can't be true if connectLeftAndRight is true."
+       
+       if opt.horizontalProbability <> [||] && verticalMin <> verticalMax then failwithf "horizontalProbability can be set when verticalMin equals verticalMax."
     
     new (verticalMin, verticalStep, verticalMax, count) = calculator (verticalMin, verticalStep, verticalMax, count, 18, 3.)
     new (verticalMin, verticalStep, verticalMax, count, opt) = calculator (verticalMin, verticalStep, verticalMax, count, 18, 3., opt)
@@ -27,43 +34,54 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
     
     
     member this.evaluate verticalLine horizontalLine startFrom =
-        let calc lines =
-            let mutable s = [| 0..verticalLine-1 |]
-            if opt.connectLeftAndRight then
-                for i in lines do
-                    let a = s[i]
-                    if i = verticalLine-1 then
-                        s[i] <- s[0]
-                        s[0] <- a
-                    else
-                        s[i] <- s[i+1]
-                        s[i+1] <- a  
-            else
-                for i in lines do
-                    let a = s[i]
-                    s[i] <- s[i+1]
-                    s[i+1] <- a
-            s
-            
         let r = Random()
         let calculated =
+            let probArr =
+                if opt.horizontalProbability = [||] then
+                    [| 0 |]
+                else
+                    [|
+                        for i in 0..opt.horizontalProbability.Length-1 ->
+                            Array.replicate opt.horizontalProbability[i] i
+                    |] |> Array.concat
+            let length = probArr.Length
             [|
                 for _ in 1..count ->
-                    let baseHorizontal =
-                        [|
-                            for _ in 1..horizontalLine/opt.duplicationTimes ->
-                                r.Next(0, if opt.connectLeftAndRight then verticalLine else verticalLine-1)
-                        |]
-                    [|
-                        for i in 1..opt.duplicationTimes ->
-                            if i % 2 = 0 then
-                                baseHorizontal |> (if opt.reverseVertically then Array.rev else id) |> (if opt.reverseHorizontally then Array.map (fun x -> verticalLine-2-x) else id)
-                            else
-                                baseHorizontal
-                    |]
-                        |> Array.concat
-                        |> calc 
-                        |> Array.findIndex ((=)startFrom)
+                    let mutable s = [| 0..verticalLine-1 |]
+                    for _ in 1..horizontalLine do
+                        if opt.connectLeftAndRight then
+                            let line = r.Next(0, verticalLine)
+                            let pass = probArr[r.Next(0, length-1)]
+                            let a = s[line]
+                            s[line] <- s[(line+pass+1)%verticalLine]
+                            s[(line+pass+1)%verticalLine] <- a
+                        else
+                            // TODO: horizontalProbabilityを実装
+                            let line = r.Next(0, verticalLine-1)
+                            let a = s[line]
+                            s[line] <- s[line+1]
+                            s[line+1] <- a
+                    s |> Array.findIndex ((=)startFrom)
+                    // [|
+                    //     for _ in 1..horizontalLine ->
+                    //         r.Next(0, if opt.connectLeftAndRight then verticalLine else verticalLine-1),
+                    //         probArr[r.Next(0, length-1)]
+                    // |]
+                    // let baseHorizontal =
+                    //     [|
+                    //         for _ in 1..horizontalLine/opt.duplicationTimes ->
+                    //             r.Next(0, if opt.connectLeftAndRight then verticalLine else verticalLine-1)
+                    //     |]
+                    // [|
+                    //     for i in 1..opt.duplicationTimes ->
+                    //         if i % 2 = 0 then
+                    //             baseHorizontal |> (if opt.reverseVertically then Array.rev else id) |> (if opt.reverseHorizontally then Array.map (fun x -> verticalLine-2-x) else id)
+                    //         else
+                    //             baseHorizontal
+                    // |]
+                    //     |> Array.concat
+                        // |> calc 
+                        // |> Array.findIndex ((=)startFrom)
             |]
             
         [|
@@ -74,7 +92,7 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
     member this.calculate () =
         let sw = Diagnostics.Stopwatch()
         sw.Start()
-        File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv", "x,y\n")
+        File.WriteAllText(opt.pathToResultFile, "x,y\n")
         
         _result <-
             [|
@@ -100,7 +118,7 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
                                     lastIndex <- l
                         
                         printfn "%d finished" i
-                        File.AppendAllText(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv", $"{i},{vert}\n")
+                        File.AppendAllText(opt.pathToResultFile, $"{i},{vert}\n")
                         return vert
                     }
             |] |> Async.Parallel |> Async.RunSynchronously
