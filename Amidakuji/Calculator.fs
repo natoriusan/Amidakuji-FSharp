@@ -3,33 +3,44 @@ open System
 open System.IO
 
 
-type options (connectLeftAndRight, duplicationTimes, reverseVertically, reverseHorizontally, horizontalProbability, pathToResultFile) = // vertically -> 上下反転, horizontally -> 左右反転
-    new () = options (false, 1, false, false, [||])
-    new (connectLeftAndRight) = options (connectLeftAndRight, 1, false, false, [||])
-    new (horizontalProbability) = options (false, 1, false, false, horizontalProbability)
-    new (connectLeftAndRight, horizontalProbability) = options (connectLeftAndRight, 1, false, false, horizontalProbability)
-    new (duplicationTimes, reverseVertically, reverseHorizontally) = options (false, duplicationTimes, reverseVertically, reverseHorizontally, [||])
-    new (connectLeftAndRight, duplicationTimes, reverseVertically, reverseHorizontally, horizontalProbability) = options (connectLeftAndRight, duplicationTimes, reverseVertically, reverseHorizontally, horizontalProbability, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv")
+type options (connectLeftAndRight, horizontalProbability, pathToResultFile, showProgress) = // vertically -> 上下反転, horizontally -> 左右反転
+    let mutable _connectLeftAndRight = connectLeftAndRight
+    let mutable _horizontalProbability = horizontalProbability
+    let mutable _pathToResultFile = pathToResultFile
+    let mutable _showProgress = showProgress
     
-    member this.connectLeftAndRight = connectLeftAndRight
-    member this.duplicationTimes = duplicationTimes
-    member this.reverseVertically = reverseVertically
-    member this.reverseHorizontally = reverseHorizontally
-    member this.horizontalProbability = horizontalProbability
-    member this.pathToResultFile = pathToResultFile
+    new () = options (false, [||])
+    new (connectLeftAndRight) = options (connectLeftAndRight, [||])
+    new (horizontalProbability) = options (false, horizontalProbability)
+    new (connectLeftAndRight, horizontalProbability) = options (connectLeftAndRight, horizontalProbability, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv", true)
     
+    member this.connectLeftAndRight
+        with get () = _connectLeftAndRight
+        and  set v  = _connectLeftAndRight <- v
+    member this.horizontalProbability
+        with get () = _horizontalProbability
+        and  set v  = _horizontalProbability <- v
+    member this.pathToResultFile
+        with get () = _pathToResultFile
+        and  set v  = _pathToResultFile <- v
+    member this.showProgress
+        with get () = _showProgress
+        and  set v  = _showProgress <- v
+    member this.copy () =
+        options (_connectLeftAndRight, _horizontalProbability, _pathToResultFile, _showProgress)
+
     
 // TODO: reverse と horizontalProbability が同時に設定されているときにエラーを出す
 type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBase, opt: options) =
     let mutable _result = [||]
     let mutable _elapsed = TimeSpan ()
     
-    do if opt.connectLeftAndRight && (opt.reverseHorizontally || opt.reverseVertically) then failwithf "reverseHorizontally and reverseVertically can't be true if connectLeftAndRight is true."
+    do //if opt.connectLeftAndRight && (opt.reverseHorizontally || opt.reverseVertically) then failwithf "reverseHorizontally and reverseVertically can't be true if connectLeftAndRight is true."
        
        if opt.horizontalProbability <> [||] && verticalMin <> verticalMax then failwithf "horizontalProbability can be set when verticalMin equals verticalMax."
     
-    new (verticalMin, verticalStep, verticalMax, count) = calculator (verticalMin, verticalStep, verticalMax, count, 18, 3.)
-    new (verticalMin, verticalStep, verticalMax, count, opt) = calculator (verticalMin, verticalStep, verticalMax, count, 18, 3., opt)
+    new (verticalMin, verticalStep, verticalMax) = calculator (verticalMin, verticalStep, verticalMax, 300000, 22, 3.)
+    new (verticalMin, verticalStep, verticalMax, opt) = calculator (verticalMin, verticalStep, verticalMax, 300000, 22, 3., opt)
     new (verticalMin, verticalStep, verticalMax, count, accuracy, accBase) = calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBase, options ())
     
     
@@ -92,7 +103,8 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
     member this.calculate () =
         let sw = Diagnostics.Stopwatch()
         sw.Start()
-        File.WriteAllText(opt.pathToResultFile, "x,y\n")
+        if opt.pathToResultFile <> "" then
+            File.WriteAllText(opt.pathToResultFile, "x,y\n")
         
         _result <-
             [|
@@ -117,8 +129,10 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
                                     index <- index + (index-lastIndex)/2.
                                     lastIndex <- l
                         
-                        printfn "%d finished" i
-                        File.AppendAllText(opt.pathToResultFile, $"{i},{vert}\n")
+                        if opt.showProgress then
+                            printfn $"{i} finished"
+                        if opt.pathToResultFile <> "" then
+                            File.AppendAllText(opt.pathToResultFile, $"{i},{vert}\n")
                         return vert
                     }
             |] |> Async.Parallel |> Async.RunSynchronously
