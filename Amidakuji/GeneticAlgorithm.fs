@@ -19,7 +19,7 @@ type GAofBiasedAmidakuji (verticalMin, verticalStep, verticalMax, maxGeneration,
             for i in genes ->
                 async {
                     let o = copiedOpt.copy ()
-                    o.horizontalProbability <- i
+                    o.horizontalProbability <- (fun _ -> i)
                     let calc = calculator (verticalLine, 1, verticalLine, count, accuracy, accBase, o)
                     calc.calculate ()
                     return calc.result[0], i
@@ -97,6 +97,7 @@ type GAofBiasedAmidakuji (verticalMin, verticalStep, verticalMax, maxGeneration,
                                     uniformCrossover a b
                             |] |> Array.concat |> mutation
                         printfn $"Generation {j} finished"
+                    printfn $"{i} finished"
                     lastBest
             |]
     member this.result = _result

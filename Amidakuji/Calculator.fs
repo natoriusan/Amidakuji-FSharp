@@ -9,8 +9,8 @@ type options (connectLeftAndRight, horizontalProbability, pathToResultFile, show
     let mutable _pathToResultFile = pathToResultFile
     let mutable _showProgress = showProgress
     
-    new () = options (false, [||])
-    new (connectLeftAndRight) = options (connectLeftAndRight, [||])
+    new () = options (false, fun _ -> [||])
+    new (connectLeftAndRight) = options (connectLeftAndRight, fun _ -> [||])
     new (horizontalProbability) = options (false, horizontalProbability)
     new (connectLeftAndRight, horizontalProbability) = options (connectLeftAndRight, horizontalProbability, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Output/Amidakuji/data.csv", true)
     
@@ -35,9 +35,9 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
     let mutable _result = [||]
     let mutable _elapsed = TimeSpan ()
     
-    do //if opt.connectLeftAndRight && (opt.reverseHorizontally || opt.reverseVertically) then failwithf "reverseHorizontally and reverseVertically can't be true if connectLeftAndRight is true."
+    //do if opt.connectLeftAndRight && (opt.reverseHorizontally || opt.reverseVertically) then failwithf "reverseHorizontally and reverseVertically can't be true if connectLeftAndRight is true."
        
-       if opt.horizontalProbability <> [||] && verticalMin <> verticalMax then failwithf "horizontalProbability can be set when verticalMin equals verticalMax."
+    //    if opt.horizontalProbability <> [||] && verticalMin <> verticalMax then failwithf "horizontalProbability can be set when verticalMin equals verticalMax."
     
     new (verticalMin, verticalStep, verticalMax) = calculator (verticalMin, verticalStep, verticalMax, 300000, 22, 3.)
     new (verticalMin, verticalStep, verticalMax, opt) = calculator (verticalMin, verticalStep, verticalMax, 300000, 22, 3., opt)
@@ -48,12 +48,12 @@ type calculator (verticalMin, verticalStep, verticalMax, count, accuracy, accBas
         let r = Random()
         let calculated =
             let probArr =
-                if opt.horizontalProbability = [||] then
+                if opt.horizontalProbability verticalLine = [||] then
                     [| 0 |]
                 else
                     [|
-                        for i in 0..opt.horizontalProbability.Length-1 ->
-                            Array.replicate opt.horizontalProbability[i] i
+                        for i in 0..(opt.horizontalProbability verticalLine).Length-1 ->
+                            Array.replicate ((opt.horizontalProbability verticalLine)[i]) i
                     |] |> Array.concat
             let length = probArr.Length
             [|
